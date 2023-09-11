@@ -1,7 +1,7 @@
-.PHONY: run
-run:
-	go run main.go logger.go
+.PHONY: server
+server:
+	go run server.go logger.go
 
-.PHONY: post
-post:
+.PHONY: client
+client:
 	curl http://localhost:8080/health

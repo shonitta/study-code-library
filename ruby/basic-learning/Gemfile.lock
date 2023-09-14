@@ -2,12 +2,14 @@ GEM
   remote: https://rubygems.org/
   specs:
     awesome_print (1.9.2)
+    minitest (5.20.0)
 
 PLATFORMS
   x86_64-darwin-21
 
 DEPENDENCIES
   awesome_print
+  minitest
 
 BUNDLED WITH
    2.4.19

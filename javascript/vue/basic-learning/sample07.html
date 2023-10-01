@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <style>
+      .alert {
+        background-color: #fcc;
+        padding: 10px;
+        border: solid 1px #f00;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <alert-box>error content</alert-box>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+      Vue.component("alert-box", {
+        template: `
+          <div class="alert" v-on:click="caution">
+              <strong>Error!</strong>
+              <slot></slot>
+          </div>
+          `,
+        methods: {
+          caution: function () {
+            alert("Clicked!");
+          },
+        },
+      });
+
+      var app = new Vue({
+        el: "#app",
+      });
+    </script>
+  </body>
+</html>

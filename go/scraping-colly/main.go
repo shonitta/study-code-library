@@ -12,7 +12,7 @@ import (
 
 const (
     Domain = "www.bankers.co.jp"
-    URL = "https://www.bankers.co.jp/investment/performance.html"
+    URL = "https://" + Domain + "/investment/performance.html"
 	UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
 	SaveDir = "outputs"
 )
@@ -32,6 +32,7 @@ type TableRow struct {
 	EndDate string
 	RefundType string
 	ActualShare string
+	TargetAmount string
 }
 
 func main() {
@@ -46,6 +47,9 @@ func main() {
 	})
 
 	table := make([]TableRow, 0)
+	c.OnRequest(func(r *colly.Request) {
+		log.Println("Visiting", r.URL.String())
+	})
     c.OnHTML("table.table-performance", func(e *colly.HTMLElement) {
 		table = append(table, TableRow{
 			"ファンドNo.",
@@ -62,10 +66,18 @@ func main() {
 			"運用終了（予定）日",
 			"元本償還/収益分配",
 			"分配率実績（年率）",
+			"募集金額",
 		})
+
+		// デバッグ用にカウンターを設定してウェブサイト件数を制限
+		counter := 0
 		e.ForEach("tbody > tr", func(_ int, el *colly.HTMLElement) {
+			if counter >= 3 {
+				return
+			}
+
 			FundPageURL := el.ChildAttr("td:nth-of-type(3) > a", "href")
-			table = append(table, TableRow{
+			row := TableRow{
 				FundNo: el.ChildText("td:nth-of-type(1)"),
 				Status: el.ChildText("td:nth-of-type(2)"),
 				FundName: el.ChildText("td:nth-of-type(3)"),
@@ -80,11 +92,29 @@ func main() {
 				EndDate: el.ChildText("td:nth-of-type(11)"),
 				RefundType: el.ChildText("td:nth-of-type(12)"),
 				ActualShare: el.ChildText("td:nth-of-type(13)"),
+			}
+			c2 := c.Clone()
+			c2.OnRequest(func(r *colly.Request) {
+				log.Println("Visiting", r.URL.String())
 			})
+			// 募集金額のみを取得するためにカウンターを設定（デバッグ用）
+			counter2 := 0
+			c2.OnHTML("dl.funds-card-main-data", func(el *colly.HTMLElement) {
+				if counter2 >= 1 {
+					return
+				}
+				row.TargetAmount = el.ChildText("dd:nth-of-type(1)")
+				table = append(table, row)
+				counter2++
+			})
+			err := c2.Visit(FundPageURL)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+
+			counter++
 		})
-	})
-	c.OnRequest(func(r *colly.Request) {
-		log.Println("Visiting", r.URL.String())
 	})
 	
 	err := c.Visit(URL)
@@ -122,6 +152,7 @@ func main() {
 			row.EndDate,
 			row.RefundType,
 			row.ActualShare,
+			row.TargetAmount,
 		}
 		if err := w.Write(record); err != nil {
 			log.Fatal(err)

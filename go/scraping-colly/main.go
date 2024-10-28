@@ -2,8 +2,8 @@ package main
 
 import (
 	"os"
-	"fmt"
 	"time"
+	"log"
 	"encoding/csv"
 	"path/filepath"
 
@@ -84,23 +84,23 @@ func main() {
 		})
 	})
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting", r.URL.String())
+		log.Println("Visiting", r.URL.String())
 	})
 	
 	err := c.Visit(URL)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 		return
 	}
 
 	err = os.MkdirAll(SaveDir, os.ModePerm)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 		return
 	}
 	f, err := os.Create(filepath.Join(SaveDir, "result.csv"))
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 		return
 	}
 	defer f.Close()
@@ -124,7 +124,7 @@ func main() {
 			row.ActualShare,
 		}
 		if err := w.Write(record); err != nil {
-			fmt.Println(err)
+			log.Fatal(err)
 			return
 		}
 	}

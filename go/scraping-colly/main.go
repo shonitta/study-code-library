@@ -1,42 +1,42 @@
 package main
 
 import (
-	"os"
-	"time"
-	"log"
 	"encoding/csv"
+	"log"
+	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gocolly/colly/v2"
 )
 
 const (
-    Domain = "www.bankers.co.jp"
-    URL = "https://" + Domain + "/investment/performance.html"
+	Domain    = "www.bankers.co.jp"
+	URL       = "https://" + Domain + "/investment/performance.html"
 	UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
-	SaveDir = "outputs"
+	SaveDir   = "outputs"
 )
 
 type TableRow struct {
-	FundNo string
-	Status string
-	FundName string
-	FundPageURL string
+	FundNo                  string
+	Status                  string
+	FundName                string
+	FundPageURL             string
 	PlannedInvestmentPeriod string
-	ExpectedShare string
-	AUM string
-	RefundedPrincipal string
-	CurrentAUM string
-	ShareAmount string
-	StartDate string
-	EndDate string
-	RefundType string
-	ActualShare string
-	TargetAmount string
+	ExpectedShare           string
+	AUM                     string
+	RefundedPrincipal       string
+	CurrentAUM              string
+	ShareAmount             string
+	StartDate               string
+	EndDate                 string
+	RefundType              string
+	ActualShare             string
+	TargetAmount            string
 }
 
 func init() {
-	log.SetFlags(log.LstdFlags|log.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
 func main() {
@@ -45,8 +45,8 @@ func main() {
 		colly.UserAgent(UserAgent),
 	)
 	c.Limit(&colly.LimitRule{
-		DomainGlob: Domain,
-		Delay: 5 * time.Second,
+		DomainGlob:  Domain,
+		Delay:       5 * time.Second,
 		RandomDelay: 5 * time.Second,
 	})
 
@@ -54,7 +54,7 @@ func main() {
 	c.OnRequest(func(r *colly.Request) {
 		log.Println("Visiting", r.URL.String())
 	})
-    c.OnHTML("table.table-performance", func(e *colly.HTMLElement) {
+	c.OnHTML("table.table-performance", func(e *colly.HTMLElement) {
 		table = append(table, TableRow{
 			"ファンドNo.",
 			"ステータス",
@@ -82,20 +82,20 @@ func main() {
 
 			FundPageURL := el.ChildAttr("td:nth-of-type(3) > a", "href")
 			row := TableRow{
-				FundNo: el.ChildText("td:nth-of-type(1)"),
-				Status: el.ChildText("td:nth-of-type(2)"),
-				FundName: el.ChildText("td:nth-of-type(3)"),
-				FundPageURL: FundPageURL,
+				FundNo:                  el.ChildText("td:nth-of-type(1)"),
+				Status:                  el.ChildText("td:nth-of-type(2)"),
+				FundName:                el.ChildText("td:nth-of-type(3)"),
+				FundPageURL:             FundPageURL,
 				PlannedInvestmentPeriod: el.ChildText("td:nth-of-type(4)"),
-				ExpectedShare: el.ChildText("td:nth-of-type(5)"),
-				AUM: el.ChildText("td:nth-of-type(6)"),
-				RefundedPrincipal: el.ChildText("td:nth-of-type(7)"),
-				CurrentAUM: el.ChildText("td:nth-of-type(8)"),
-				ShareAmount: el.ChildText("td:nth-of-type(9)"),
-				StartDate: el.ChildText("td:nth-of-type(10)"),
-				EndDate: el.ChildText("td:nth-of-type(11)"),
-				RefundType: el.ChildText("td:nth-of-type(12)"),
-				ActualShare: el.ChildText("td:nth-of-type(13)"),
+				ExpectedShare:           el.ChildText("td:nth-of-type(5)"),
+				AUM:                     el.ChildText("td:nth-of-type(6)"),
+				RefundedPrincipal:       el.ChildText("td:nth-of-type(7)"),
+				CurrentAUM:              el.ChildText("td:nth-of-type(8)"),
+				ShareAmount:             el.ChildText("td:nth-of-type(9)"),
+				StartDate:               el.ChildText("td:nth-of-type(10)"),
+				EndDate:                 el.ChildText("td:nth-of-type(11)"),
+				RefundType:              el.ChildText("td:nth-of-type(12)"),
+				ActualShare:             el.ChildText("td:nth-of-type(13)"),
 			}
 			c2 := c.Clone()
 			c2.OnRequest(func(r *colly.Request) {
@@ -120,7 +120,7 @@ func main() {
 			counter++
 		})
 	})
-	
+
 	err := c.Visit(URL)
 	if err != nil {
 		log.Fatal(err)

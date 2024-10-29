@@ -35,6 +35,10 @@ type TableRow struct {
 	TargetAmount string
 }
 
+func init() {
+	log.SetFlags(log.LstdFlags|log.Lshortfile)
+}
+
 func main() {
 	c := colly.NewCollector(
 		colly.AllowedDomains(Domain),

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -33,6 +34,8 @@ type TableRow struct {
 	RefundType              string
 	ActualShare             string
 	FundFeatureText         string
+	FundTermsConditionsText string
+	FundScheduleText        string
 	CollateralGuaranteeText string
 	FundPurposeText         string
 }
@@ -73,6 +76,8 @@ func main() {
 			"一覧表：元本償還/収益分配",
 			"一覧表：分配率実績（年率）",
 			"個別ページ・ファンド概要：本ファンドのポイント",
+			"個別ページ・ファンド概要：諸条件",
+			"個別ページ・ファンド概要：スケジュール",
 			"個別ページ・プロジェクト概要１：担保・保証",
 			"個別ページ・プロジェクト概要１：借手資金使途",
 		})
@@ -80,14 +85,14 @@ func main() {
 		e.ForEach("tbody > tr", func(_ int, el *colly.HTMLElement) {
 			FundPageURL := el.ChildAttr("td:nth-of-type(3) > a", "href")
 
-			// TODO: デバッグ用なので削除する
-			// 特定のファンドページの挙動確認用
-			cond1 := FundPageURL != "https://www.bankers.co.jp/investment/lottery_application_entry.html?command=new&fund_id=516"
-			cond2 := FundPageURL != "https://www.bankers.co.jp/investment/investment_entry.html?command=new&fund_id=510"
-			cond3 := FundPageURL != "https://www.bankers.co.jp/investment/lottery_application_entry.html?command=new&fund_id=509"
-			if cond1 && cond2 && cond3 {
-				return
-			}
+			// // TODO: デバッグ用なので削除する
+			// // 特定のファンドページの挙動確認用
+			// cond1 := FundPageURL != "https://www.bankers.co.jp/investment/lottery_application_entry.html?command=new&fund_id=516"
+			// cond2 := FundPageURL != "https://www.bankers.co.jp/investment/investment_entry.html?command=new&fund_id=510"
+			// cond3 := FundPageURL != "https://www.bankers.co.jp/investment/lottery_application_entry.html?command=new&fund_id=509"
+			// if cond1 && cond2 && cond3 {
+			// 	return
+			// }
 
 			row := TableRow{
 				FundNo:                  el.ChildText("td:nth-of-type(1)"),
@@ -116,9 +121,13 @@ func main() {
 					return
 				}
 
-				// 本ファンドのポイント
+				// 本ファンドのポイント & 諸条件 & スケジュール
 				targetFlagFundFeatureText := false
 				FundFeatureText := ""
+				targetFlagFundTermsConditions := false
+				FundTermsConditionsText := ""
+				targetFlagFundSchedule := false
+				FundScheduleText := ""
 				eTabs.ForEach("section#tab1 > *", func(_ int, elTab1 *colly.HTMLElement) {
 					if elTab1.Name == "h3" && elTab1.Text == "本ファンドのポイント" {
 						targetFlagFundFeatureText = true
@@ -127,7 +136,6 @@ func main() {
 						targetFlagFundFeatureText = false
 					}
 					if targetFlagFundFeatureText && elTab1.Name != "h3" {
-						// TODO: タグに応じてテキスト結合時に改行等を入れる
 						if elTab1.Name == "h4" && FundFeatureText != "" {
 							FundFeatureText += "\n\n"
 						}
@@ -135,6 +143,36 @@ func main() {
 						if elTab1.Name == "h4" {
 							FundFeatureText += "\n"
 						}
+					}
+
+					if elTab1.Name == "h3" && elTab1.Text == "諸条件" {
+						targetFlagFundTermsConditions = true
+						log.Println("Found 諸条件")
+					} else if elTab1.Name == "h3" && targetFlagFundTermsConditions {
+						targetFlagFundTermsConditions = false
+					}
+					if targetFlagFundTermsConditions && elTab1.Name == "table" {
+						elTab1.ForEach("tbody > tr", func(_ int, elTab1Tbl *colly.HTMLElement) {
+							FundTermsConditionsText += strings.ReplaceAll(elTab1Tbl.ChildText("th"), "\n", "")
+							FundTermsConditionsText += "\n"
+							FundTermsConditionsText += elTab1Tbl.ChildText("td")
+							FundTermsConditionsText += "\n-----\n"
+						})
+					}
+
+					if elTab1.Name == "h3" && elTab1.Text == "スケジュール" {
+						targetFlagFundSchedule = true
+						log.Println("Found スケジュール")
+					} else if elTab1.Name == "h3" && targetFlagFundSchedule {
+						targetFlagFundSchedule = false
+					}
+					if targetFlagFundSchedule && elTab1.Name == "table" {
+						elTab1.ForEach("tbody > tr", func(_ int, elTab1Tbl *colly.HTMLElement) {
+							FundScheduleText += strings.ReplaceAll(elTab1Tbl.ChildText("th"), "\n", "")
+							FundScheduleText += "\n"
+							FundScheduleText += elTab1Tbl.ChildText("td")
+							FundScheduleText += "\n-----\n"
+						})
 					}
 				})
 
@@ -151,7 +189,6 @@ func main() {
 						targetFlagCollateralGuarantee = false
 					}
 					if targetFlagCollateralGuarantee && elTab2.Name != "h3" {
-						// TODO: タグに応じてテキスト結合時に改行等を入れる
 						if elTab2.Name == "h4" && CollateralGuaranteeText != "" {
 							CollateralGuaranteeText += "\n\n"
 						}
@@ -168,7 +205,6 @@ func main() {
 						targetFlagFundPurpose = false
 					}
 					if targetFlagFundPurpose && elTab2.Name != "h3" {
-						// TODO: タグに応じてテキスト結合時に改行等を入れる
 						if elTab2.Name == "h4" && FundPurposeText != "" {
 							FundPurposeText += "\n\n"
 						}
@@ -180,6 +216,8 @@ func main() {
 				})
 
 				row.FundFeatureText = FundFeatureText
+				row.FundTermsConditionsText = FundTermsConditionsText
+				row.FundScheduleText = FundScheduleText
 				row.CollateralGuaranteeText = CollateralGuaranteeText
 				row.FundPurposeText = FundPurposeText
 				table = append(table, row)
@@ -229,6 +267,8 @@ func main() {
 			row.RefundType,
 			row.ActualShare,
 			row.FundFeatureText,
+			row.FundTermsConditionsText,
+			row.FundScheduleText,
 			row.CollateralGuaranteeText,
 			row.FundPurposeText,
 		}

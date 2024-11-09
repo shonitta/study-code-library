@@ -33,6 +33,8 @@ type TableRow struct {
 	RefundType              string
 	ActualShare             string
 	FundFeatureText         string
+	CollateralGuaranteeText string
+	FundPurposeText         string
 }
 
 func init() {
@@ -71,6 +73,8 @@ func main() {
 			"元本償還/収益分配",
 			"分配率実績（年率）",
 			"本ファンドのポイント",
+			"担保・保証",
+			"借手資金使途",
 		})
 
 		e.ForEach("tbody > tr", func(_ int, el *colly.HTMLElement) {
@@ -107,24 +111,60 @@ func main() {
 			})
 			// 入れ子でファンドページにアクセスしないようにカウンターを設定
 			counter2 := 0
-			c2.OnHTML("section#tab1", func(eTab1 *colly.HTMLElement) {
+			c2.OnHTML("div.main-contents__inner", func(eTabs *colly.HTMLElement) {
 				if counter2 >= 1 {
 					return
 				}
-				targetFlag := false
+
+				// 本ファンドのポイント
+				targetFlagFundFeatureText := false
 				FundFeatureText := ""
-				eTab1.ForEach("*", func(_ int, elTab1 *colly.HTMLElement) {
+				eTabs.ForEach("section#tab1 > *", func(_ int, elTab1 *colly.HTMLElement) {
 					if elTab1.Name == "h3" && elTab1.Text == "本ファンドのポイント" {
-						targetFlag = true
-					} else if elTab1.Name == "h3" && targetFlag {
-						targetFlag = false
+						targetFlagFundFeatureText = true
+						log.Println("Found 本ファンドのポイント")
+					} else if elTab1.Name == "h3" && targetFlagFundFeatureText {
+						targetFlagFundFeatureText = false
 					}
-					if targetFlag && elTab1.Name != "h3" {
+					if targetFlagFundFeatureText && elTab1.Name != "h3" {
 						// TODO: タグに応じてテキスト結合時に改行等を入れる
 						FundFeatureText += elTab1.Text
 					}
 				})
+
+				// 担保・保証 & 借手資金使途
+				targetFlagCollateralGuarantee := false
+				CollateralGuaranteeText := ""
+				targetFlagFundPurpose := false
+				FundPurposeText := ""
+				eTabs.ForEach("section#tab2 > *", func(_ int, elTab2 *colly.HTMLElement) {
+					if elTab2.Name == "h3" && elTab2.Text == "担保・保証" {
+						targetFlagCollateralGuarantee = true
+						log.Println("Found 担保・保証")
+					} else if elTab2.Name == "h3" && targetFlagCollateralGuarantee {
+						targetFlagCollateralGuarantee = false
+					}
+					if targetFlagCollateralGuarantee && elTab2.Name != "h3" {
+						// TODO: タグに応じてテキスト結合時に改行等を入れる
+						CollateralGuaranteeText += elTab2.Text
+					}
+
+					if elTab2.Name == "h3" && elTab2.Text == "借手資金使途" {
+						targetFlagFundPurpose = true
+						log.Println("Found 借手資金使途")
+					} else if elTab2.Name == "h3" && targetFlagFundPurpose {
+						targetFlagFundPurpose = false
+					}
+					if targetFlagFundPurpose && elTab2.Name != "h3" {
+						// TODO: タグに応じてテキスト結合時に改行等を入れる
+						FundPurposeText += elTab2.Text
+					}
+				})
+
 				row.FundFeatureText = FundFeatureText
+				row.CollateralGuaranteeText = CollateralGuaranteeText
+				row.FundPurposeText = FundPurposeText
+				log.Println(row)
 				table = append(table, row)
 				counter2++
 			})
@@ -172,6 +212,8 @@ func main() {
 			row.RefundType,
 			row.ActualShare,
 			row.FundFeatureText,
+			row.CollateralGuaranteeText,
+			row.FundPurposeText,
 		}
 		if err := w.Write(record); err != nil {
 			log.Fatal(err)

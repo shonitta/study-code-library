@@ -32,7 +32,7 @@ type TableRow struct {
 	EndDate                 string
 	RefundType              string
 	ActualShare             string
-	TargetAmount            string
+	FundFeatureText         string
 }
 
 func init() {
@@ -46,8 +46,8 @@ func main() {
 	)
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  Domain,
-		Delay:       5 * time.Second,
-		RandomDelay: 5 * time.Second,
+		Delay:       1 * time.Second,
+		RandomDelay: 1 * time.Second,
 	})
 
 	table := make([]TableRow, 0)
@@ -70,17 +70,21 @@ func main() {
 			"運用終了（予定）日",
 			"元本償還/収益分配",
 			"分配率実績（年率）",
-			"募集金額",
+			"本ファンドのポイント",
 		})
 
-		// デバッグ用にカウンターを設定してウェブサイト件数を制限
-		counter := 0
 		e.ForEach("tbody > tr", func(_ int, el *colly.HTMLElement) {
-			if counter >= 3 {
+			FundPageURL := el.ChildAttr("td:nth-of-type(3) > a", "href")
+
+			// TODO: デバッグ用なので削除する
+			// 特定のファンドページの挙動確認用
+			cond1 := FundPageURL != "https://www.bankers.co.jp/investment/lottery_application_entry.html?command=new&fund_id=516"
+			cond2 := FundPageURL != "https://www.bankers.co.jp/investment/investment_entry.html?command=new&fund_id=510"
+			cond3 := FundPageURL != "https://www.bankers.co.jp/investment/lottery_application_entry.html?command=new&fund_id=509"
+			if cond1 && cond2 && cond3 {
 				return
 			}
 
-			FundPageURL := el.ChildAttr("td:nth-of-type(3) > a", "href")
 			row := TableRow{
 				FundNo:                  el.ChildText("td:nth-of-type(1)"),
 				Status:                  el.ChildText("td:nth-of-type(2)"),
@@ -101,13 +105,26 @@ func main() {
 			c2.OnRequest(func(r *colly.Request) {
 				log.Println("Visiting", r.URL.String())
 			})
-			// 募集金額のみを取得するためにカウンターを設定（デバッグ用）
+			// 入れ子でファンドページにアクセスしないようにカウンターを設定
 			counter2 := 0
-			c2.OnHTML("dl.funds-card-main-data", func(el *colly.HTMLElement) {
+			c2.OnHTML("section#tab1", func(eTab1 *colly.HTMLElement) {
 				if counter2 >= 1 {
 					return
 				}
-				row.TargetAmount = el.ChildText("dd:nth-of-type(1)")
+				targetFlag := false
+				FundFeatureText := ""
+				eTab1.ForEach("*", func(_ int, elTab1 *colly.HTMLElement) {
+					if elTab1.Name == "h3" && elTab1.Text == "本ファンドのポイント" {
+						targetFlag = true
+					} else if elTab1.Name == "h3" && targetFlag {
+						targetFlag = false
+					}
+					if targetFlag && elTab1.Name != "h3" {
+						// TODO: タグに応じてテキスト結合時に改行等を入れる
+						FundFeatureText += elTab1.Text
+					}
+				})
+				row.FundFeatureText = FundFeatureText
 				table = append(table, row)
 				counter2++
 			})
@@ -116,8 +133,6 @@ func main() {
 				log.Fatal(err)
 				return
 			}
-
-			counter++
 		})
 	})
 
@@ -156,7 +171,7 @@ func main() {
 			row.EndDate,
 			row.RefundType,
 			row.ActualShare,
-			row.TargetAmount,
+			row.FundFeatureText,
 		}
 		if err := w.Write(record); err != nil {
 			log.Fatal(err)

@@ -58,23 +58,23 @@ func main() {
 	})
 	c.OnHTML("table.table-performance", func(e *colly.HTMLElement) {
 		table = append(table, TableRow{
-			"ファンドNo.",
-			"ステータス",
-			"ファンド名",
-			"ファンドURL",
-			"予定運用期間",
-			"予定分配率（年率）",
-			"運用額",
-			"償還済み元本",
-			"運用残高（償還繰越金含む）",
-			"分配金額合計（税引前）",
-			"運用開始日",
-			"運用終了（予定）日",
-			"元本償還/収益分配",
-			"分配率実績（年率）",
-			"本ファンドのポイント",
-			"担保・保証",
-			"借手資金使途",
+			"一覧表：ファンドNo.",
+			"一覧表：ステータス",
+			"一覧表：ファンド名",
+			"一覧表：ファンドURL",
+			"一覧表：予定運用期間",
+			"一覧表：予定分配率（年率）",
+			"一覧表：運用額",
+			"一覧表：償還済み元本",
+			"一覧表：運用残高（償還繰越金含む）",
+			"一覧表：分配金額合計（税引前）",
+			"一覧表：運用開始日",
+			"一覧表：運用終了（予定）日",
+			"一覧表：元本償還/収益分配",
+			"一覧表：分配率実績（年率）",
+			"個別ページ・ファンド概要：本ファンドのポイント",
+			"個別ページ・プロジェクト概要１：担保・保証",
+			"個別ページ・プロジェクト概要１：借手資金使途",
 		})
 
 		e.ForEach("tbody > tr", func(_ int, el *colly.HTMLElement) {
@@ -128,7 +128,13 @@ func main() {
 					}
 					if targetFlagFundFeatureText && elTab1.Name != "h3" {
 						// TODO: タグに応じてテキスト結合時に改行等を入れる
+						if elTab1.Name == "h4" && FundFeatureText != "" {
+							FundFeatureText += "\n\n"
+						}
 						FundFeatureText += elTab1.Text
+						if elTab1.Name == "h4" {
+							FundFeatureText += "\n"
+						}
 					}
 				})
 
@@ -146,7 +152,13 @@ func main() {
 					}
 					if targetFlagCollateralGuarantee && elTab2.Name != "h3" {
 						// TODO: タグに応じてテキスト結合時に改行等を入れる
+						if elTab2.Name == "h4" && CollateralGuaranteeText != "" {
+							CollateralGuaranteeText += "\n\n"
+						}
 						CollateralGuaranteeText += elTab2.Text
+						if elTab2.Name == "h4" {
+							CollateralGuaranteeText += "\n"
+						}
 					}
 
 					if elTab2.Name == "h3" && elTab2.Text == "借手資金使途" {
@@ -157,14 +169,19 @@ func main() {
 					}
 					if targetFlagFundPurpose && elTab2.Name != "h3" {
 						// TODO: タグに応じてテキスト結合時に改行等を入れる
+						if elTab2.Name == "h4" && FundPurposeText != "" {
+							FundPurposeText += "\n\n"
+						}
 						FundPurposeText += elTab2.Text
+						if elTab2.Name == "h4" {
+							FundPurposeText += "\n"
+						}
 					}
 				})
 
 				row.FundFeatureText = FundFeatureText
 				row.CollateralGuaranteeText = CollateralGuaranteeText
 				row.FundPurposeText = FundPurposeText
-				log.Println(row)
 				table = append(table, row)
 				counter2++
 			})
